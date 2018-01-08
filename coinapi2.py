@@ -2,12 +2,14 @@ import requests
 from datetime import datetime, timedelta
 
 def get_json(GET, endpoint='https://rest.coinapi.io', headers={'X-CoinAPI-Key': '<YOUR_API_KEY>'}):
+	# Gets the json-formatted output of the passed 'GET' query (relative to the endpoint).
 	url = endpoint + GET
 	response = requests.get(url, headers=headers)
 	json = response.json()
 	return json
 
 def get_exchanges(json):
+	# Returns a list of all the exchanges that coinapi can collect data from.
 	exchanges = []
 	for i in json:
 		if i['exchange_id'] not in exchanges:
@@ -16,9 +18,9 @@ def get_exchanges(json):
 	return exchanges
 
 def exch_history(symbols, exchange, start, end, period='5MIN'):
-	#returns a history of the exchange as a JSON object.
-	#start, end are datetime objects.
-	# period can equal '5MIN', '30SEC', '1HR', ...
+	#returns a history of the exchange as a JSON object with attributes 'exchange' and 'data'. 'data' is a list of intervals.
+	#'start' and 'end' are datetime objects.
+	# period can equal '5MIN', '30SEC', '1HR', ... some values work and some don't. There's a complete list on coinapi.com
 	start_str = start.replace(microsecond=0).isoformat()
 	end_str = end.replace(microsecond=0).isoformat()
 	exch_hist_obj = {}
@@ -39,15 +41,15 @@ def exch_history(symbols, exchange, start, end, period='5MIN'):
 	return json.dumps(exch_hist_obj)
 
 def week_history(exchange, period='5MIN'):
-	"""
-	Abstraction of exch_history with:
-	"""
+	# Merely a specification of exch_history with:
 	symbols = get_json('/v1/symbols')
 	start = datetime.now()
 	end = datetime.now() - timedelta(days=7)
 	return exch_history(symbols, exchange, start, end, period)
 
 def full_week():
+	# Returns a week's worth of intervals from all exchanges and all symbols.
+	# This function uses WAY too many API calls for use on an unpaid access plan.
 	exch_hist_objs = {}
 	symbols = get_json('/v1/symbols')
 	exchanges = get_exchanges(symbols)
@@ -56,6 +58,11 @@ def full_week():
 	return json.dumps(exch__hist_objs)
 
 def multigraph(symbol_id):
+	# Returns a multigraph indexed by chronological order of the intervals in a symbol's week's history on exchange 'BINANCE'.
+	# Each of the values associated with an interval should be a statistic of values from within the datset (at least to start).
+	# A multigraph can be used to detect events within the data.
+	# Events can be examined for variable-term correlation with the stock's price.
+	# Successful events can be selected and emoloyed within strategies to make money against the market.
 	mg = []
 	symbol_samples = week_history('BINANCE')['data'][symbol_id]['samples']
 	for sample in symbol_samples: # a symbol_history object:
